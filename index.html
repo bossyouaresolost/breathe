@@ -22,6 +22,7 @@
 
         #canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 
+        /* Setup UI */
         .ui-layer {
             position: relative; z-index: 20; text-align: center;
             width: 320px; transition: all 0.6s ease;
@@ -30,7 +31,6 @@
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255,255,255,0.05);
         }
-
         .ui-layer.hidden { opacity: 0; pointer-events: none; transform: scale(0.9); }
 
         .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 25px 0; }
@@ -41,13 +41,22 @@
         .preset-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; transition: 0.3s; }
         .preset-btn:hover { background: white; color: black; }
 
-        .start-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: white; color: black; font-weight: 800; cursor: pointer; letter-spacing: 2px; margin-top: 10px; }
+        .start-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: white; color: black; font-weight: 800; cursor: pointer; letter-spacing: 2px; }
 
-        /* Hero Orb - Transition Fixed to Dynamic */
+        /* Sound Icon - Top Right */
+        #mute-btn {
+            position: fixed; top: 30px; right: 30px; z-index: 40;
+            background: none; border: none; color: white; font-size: 1.5rem;
+            cursor: pointer; opacity: 0; pointer-events: none; transition: 0.5s;
+        }
+        #mute-btn.visible { opacity: 0.6; pointer-events: all; }
+        #mute-btn:hover { opacity: 1; }
+
+        /* Hero Orb */
         #orb-container {
             position: fixed; z-index: 10; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; 
-            opacity: 0; pointer-events: none; transform: scale(0.8);
+            opacity: 0; pointer-events: none;
             transition: opacity 1.5s ease;
         }
         #orb-container.visible { opacity: 1; transform: scale(1); }
@@ -56,7 +65,6 @@
             width: 300px; height: 300px; border-radius: 50%;
             background: rgba(255,255,255,0.03);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            /* Transition set dynamically in JS now */
             backdrop-filter: blur(15px);
             border: 1px solid rgba(255,255,255,0.05);
         }
@@ -64,26 +72,33 @@
         #phase-label { font-size: 0.9rem; letter-spacing: 0.4rem; font-weight: 300; margin-bottom: 5px; opacity: 0.8; }
         #timer { font-size: 6rem; font-weight: 200; line-height: 1; font-variant-numeric: tabular-nums; }
 
-        .hud { position: fixed; bottom: 40px; z-index: 30; display: flex; gap: 15px; opacity: 0; pointer-events: none; transition: 0.5s; }
-        .hud.visible { opacity: 1; pointer-events: all; }
-        .hud-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px 24px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px); font-size: 0.75rem; font-weight: 600; }
+        /* Bottom HUD - Session Timer & End */
+        .hud-bottom {
+            position: fixed; bottom: 40px; z-index: 30; text-align: center;
+            opacity: 0; pointer-events: none; transition: 0.5s;
+        }
+        .hud-bottom.visible { opacity: 1; pointer-events: all; }
+        #session-timer { font-size: 0.75rem; letter-spacing: 3px; opacity: 0.5; font-weight: 600; margin-bottom: 20px; display: block; }
+        .end-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fc8181; padding: 12px 30px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px); font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; }
 
+        /* Summary Overlay */
         #summary {
             position: fixed; inset: 0; background: rgba(5,7,10,0.98); z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: 0.8s; text-align: center;
-            padding: 20px;
+            opacity: 0; pointer-events: none; transition: 0.8s; text-align: center; padding: 20px;
         }
         #summary.active { opacity: 1; pointer-events: all; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin: 30px 0; }
-        .stat-val { font-size: 3rem; display: block; font-weight: 200; color: #4fd1c5; }
+        .stat-val { font-size: 3.5rem; display: block; font-weight: 200; color: #4fd1c5; }
         .stat-label { font-size: 0.7rem; opacity: 0.4; text-transform: uppercase; letter-spacing: 2px; }
-        #quote { font-style: italic; opacity: 0.7; max-width: 400px; line-height: 1.6; margin-bottom: 40px; font-weight: 300; }
+        #quote { font-style: italic; opacity: 0.7; max-width: 420px; line-height: 1.6; margin-bottom: 40px; font-weight: 300; font-size: 1.1rem; }
     </style>
 </head>
 <body>
 
 <canvas id="canvas"></canvas>
+
+<button id="mute-btn">🔊</button>
 
 <div class="ui-layer" id="setup-ui">
     <h2 style="font-weight: 200; letter-spacing: 8px; margin-bottom: 25px;">BREATHE</h2>
@@ -108,14 +123,14 @@
     </div>
 </div>
 
-<div class="hud" id="hud">
-    <button class="hud-btn" id="mute-btn">SOUND: ON</button>
-    <button class="hud-btn" style="color: #fc8181;" onclick="endSession()">END SESSION</button>
+<div class="hud-bottom" id="hud-bottom">
+    <span id="session-timer">00:00</span>
+    <button class="end-btn" onclick="endSession()">END SESSION</button>
 </div>
 
 <div id="summary">
     <h1 style="font-weight: 200; letter-spacing: 6px; margin-bottom: 10px;">PEACE FOUND</h1>
-    <p id="quote">"Breath is the bridge which connects life to consciousness, which unites your body to your thoughts."</p>
+    <p id="quote">"Breath is the bridge..."</p>
     <div class="stat-grid">
         <div><span class="stat-val" id="sum-time">0:00</span><span class="stat-label">Duration</span></div>
         <div><span class="stat-val" id="sum-breaths">0</span><span class="stat-label">Cycles</span></div>
@@ -128,13 +143,16 @@
     const orb = document.getElementById('orb');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const sessionTimeDisplay = document.getElementById('session-timer');
+    
     let isRunning = false, breathCount = 0, sessionStart, isMuted = false;
     let audioCtx, windNode, filterNode, binauralL, binauralR;
+    let clockInterval;
 
     const quotes = [
         "Breath is the bridge which connects life to consciousness.",
         "Quiet the mind, and the soul will speak.",
-        "Feelings come and go like clouds in a windy sky. Conscious breathing is my anchor.",
+        "Conscious breathing is my anchor.",
         "Inhale the future, exhale the past.",
         "The breath you just took is a gift. Let it be enough."
     ];
@@ -184,6 +202,7 @@
         requestAnimationFrame(animate);
     }
 
+    // --- Audio ---
     function initAudio() {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const bufferSize = 4096; let lastOut = 0.0;
@@ -221,10 +240,7 @@
         if (!isRunning || dur <= 0) return;
         currentPhase = pType;
         document.getElementById('phase-label').innerText = name;
-        
-        // CRITICAL FIX: Dynamically set the transition duration to match the input duration
         orb.style.transition = `transform ${dur}s linear, background 1s ease, box-shadow 1s ease`;
-        
         orb.style.transform = `scale(${scale})`;
         orb.style.background = `var(${colorVar})`;
         orb.style.boxShadow = `0 0 100px var(${colorVar})`;
@@ -244,10 +260,19 @@
     async function startSession() {
         document.getElementById('setup-ui').classList.add('hidden');
         orbContainer.classList.add('visible');
-        document.getElementById('hud').classList.add('visible');
+        document.getElementById('hud-bottom').classList.add('visible');
+        document.getElementById('mute-btn').classList.add('visible');
         isRunning = true;
         sessionStart = Date.now();
         initAudio();
+        
+        // Start Session Clock
+        clockInterval = setInterval(() => {
+            const diff = Math.floor((Date.now() - sessionStart) / 1000);
+            const m = Math.floor(diff/60).toString().padStart(2, '0');
+            const s = (diff%60).toString().padStart(2, '0');
+            sessionTimeDisplay.innerText = `${m}:${s}`;
+        }, 1000);
         
         const iV = parseInt(document.getElementById('in-v').value);
         const h1V = parseInt(document.getElementById('h1-v').value);
@@ -265,8 +290,9 @@
 
     function endSession() {
         isRunning = false;
+        clearInterval(clockInterval);
         const totalSecs = Math.floor((Date.now() - sessionStart) / 1000);
-        document.getElementById('sum-time').innerText = `${Math.floor(totalSecs/60)}:${(totalSecs%60).toString().padStart(2, '0')}`;
+        document.getElementById('sum-time').innerText = sessionTimeDisplay.innerText;
         document.getElementById('sum-breaths').innerText = breathCount;
         document.getElementById('quote').innerText = `"${quotes[Math.floor(Math.random()*quotes.length)]}"`;
         document.getElementById('summary').classList.add('active');
@@ -275,7 +301,7 @@
 
     document.getElementById('mute-btn').onclick = () => {
         isMuted = !isMuted;
-        document.getElementById('mute-btn').innerText = isMuted ? 'SOUND: OFF' : 'SOUND: ON';
+        document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
         isMuted ? audioCtx.suspend() : audioCtx.resume();
     };
 
